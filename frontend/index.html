@@ -1,0 +1,966 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Quench - SMS Hydration Reminders</title>
+    <meta name="description" content="Personalized hydration reminders delivered straight to your texts. 2-minute setup, no app to download. Quench calculates your daily water goal and sends timely SMS nudges.">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💧</text></svg>">
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --bg: #e8f4fd;
+        --card: rgba(255, 255, 255, 0.86);
+        --card-border: rgba(59, 130, 246, 0.18);
+        --ink: #153152;
+        --muted: #60758f;
+        --blue: #3b82f6;
+        --blue-dark: #2563eb;
+        --blue-soft: rgba(59, 130, 246, 0.12);
+        --track: rgba(59, 130, 246, 0.12);
+        --success: #0f9f76;
+        --danger: #c2410c;
+        --shadow: 0 32px 80px rgba(59, 130, 246, 0.14);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        font-family: "Inter", sans-serif;
+        color: var(--ink);
+        background:
+          radial-gradient(circle at top right, rgba(59, 130, 246, 0.18), transparent 28%),
+          radial-gradient(circle at left center, rgba(147, 197, 253, 0.22), transparent 34%),
+          linear-gradient(180deg, #f7fbff 0%, #e8f4fd 100%);
+        display: flex;
+        justify-content: center;
+        padding: 32px 18px;
+      }
+
+      .shell {
+        width: min(100%, 880px);
+        display: grid;
+        gap: 20px;
+      }
+
+      .panel {
+        background: var(--card);
+        border: 1px solid var(--card-border);
+        border-radius: 28px;
+        box-shadow: var(--shadow);
+        backdrop-filter: blur(16px);
+        overflow: hidden;
+      }
+
+      .panel-inner {
+        padding: 28px;
+      }
+
+      .hidden {
+        display: none;
+      }
+
+      .header-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 18px;
+      }
+
+      .eyebrow {
+        color: var(--muted);
+        font-size: 0.92rem;
+        font-weight: 600;
+      }
+
+      .title {
+        font-size: clamp(2rem, 4vw, 3.4rem);
+        line-height: 0.95;
+        margin: 0;
+        letter-spacing: -0.06em;
+      }
+
+      .subtle {
+        color: var(--muted);
+        line-height: 1.5;
+        margin: 8px 0 0;
+      }
+
+      .progress {
+        height: 12px;
+        border-radius: 999px;
+        background: var(--track);
+        overflow: hidden;
+      }
+
+      .progress-fill {
+        height: 100%;
+        width: 0;
+        background: linear-gradient(90deg, #60a5fa 0%, #2563eb 100%);
+        border-radius: 999px;
+        transition: width 220ms ease;
+      }
+
+      .question {
+        min-height: 260px;
+        display: grid;
+        align-content: start;
+        gap: 16px;
+        margin-top: 22px;
+      }
+
+      .label {
+        font-size: clamp(1.35rem, 3vw, 2rem);
+        font-weight: 700;
+        letter-spacing: -0.03em;
+        margin: 0;
+      }
+
+      .helper {
+        color: var(--muted);
+        margin: 0;
+        line-height: 1.5;
+      }
+
+      input,
+      select,
+      button {
+        font: inherit;
+      }
+
+      .text-input,
+      .number-input,
+      .time-input,
+      .phone-input {
+        width: 100%;
+        padding: 18px 18px;
+        border-radius: 18px;
+        border: 1px solid rgba(96, 117, 143, 0.18);
+        background: rgba(255, 255, 255, 0.92);
+        color: var(--ink);
+        outline: none;
+        transition: border-color 180ms ease, box-shadow 180ms ease;
+      }
+
+      .text-input:focus,
+      .number-input:focus,
+      .time-input:focus,
+      .phone-input:focus,
+      .code-box:focus {
+        border-color: rgba(59, 130, 246, 0.6);
+        box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.12);
+      }
+
+      .field-row {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 14px;
+      }
+
+      .pills,
+      .day-pills {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+      }
+
+      .pill,
+      .day-pill {
+        padding: 12px 16px;
+        min-height: 44px;
+        border-radius: 999px;
+        border: 1px solid rgba(59, 130, 246, 0.14);
+        background: rgba(255, 255, 255, 0.72);
+        color: var(--ink);
+        cursor: pointer;
+        transition: transform 150ms ease, border-color 150ms ease, background 150ms ease;
+      }
+
+      .pill:hover,
+      .day-pill:hover {
+        transform: translateY(-1px);
+      }
+
+      .pill.active,
+      .day-pill.active {
+        background: var(--blue);
+        color: white;
+        border-color: var(--blue);
+      }
+
+      .actions {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        margin-top: 24px;
+      }
+
+      .button {
+        border: none;
+        border-radius: 18px;
+        padding: 15px 20px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: transform 160ms ease, opacity 160ms ease, box-shadow 160ms ease;
+      }
+
+      .button:hover {
+        transform: translateY(-1px);
+      }
+
+      .button:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+        transform: none;
+      }
+
+      .button-primary {
+        background: linear-gradient(135deg, #60a5fa 0%, #2563eb 100%);
+        color: white;
+        box-shadow: 0 18px 30px rgba(37, 99, 235, 0.22);
+      }
+
+      .button-secondary {
+        background: rgba(59, 130, 246, 0.08);
+        color: var(--ink);
+      }
+
+      .timeline {
+        display: grid;
+        gap: 10px;
+        margin: 22px 0;
+      }
+
+      .timeline-row,
+      .schedule-row {
+        display: grid;
+        grid-template-columns: 104px 1fr auto;
+        gap: 12px;
+        align-items: center;
+        padding: 14px 16px;
+        background: rgba(255, 255, 255, 0.72);
+        border: 1px solid rgba(59, 130, 246, 0.1);
+        border-radius: 18px;
+      }
+
+      .timeline-time,
+      .metric-number,
+      .schedule-amount {
+        font-variant-numeric: tabular-nums;
+      }
+
+      .verify-wrap {
+        margin-top: 8px;
+        padding: 18px;
+        border-radius: 22px;
+        background: rgba(59, 130, 246, 0.06);
+        border: 1px solid rgba(59, 130, 246, 0.12);
+      }
+
+      .code-grid {
+        display: grid;
+        grid-template-columns: repeat(6, minmax(0, 1fr));
+        gap: 10px;
+        margin: 16px 0;
+      }
+
+      .code-box {
+        width: 100%;
+        min-height: 44px;
+        aspect-ratio: 1 / 1;
+        border-radius: 18px;
+        border: 1px solid rgba(96, 117, 143, 0.18);
+        text-align: center;
+        font-size: 1.5rem;
+        font-weight: 700;
+        background: white;
+      }
+
+      .metrics {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 14px;
+        margin: 18px 0 24px;
+      }
+
+      .metric-card {
+        padding: 18px;
+        border-radius: 22px;
+        background: rgba(255, 255, 255, 0.72);
+        border: 1px solid rgba(59, 130, 246, 0.1);
+      }
+
+      .metric-label {
+        color: var(--muted);
+        font-size: 0.9rem;
+        margin-bottom: 8px;
+      }
+
+      .metric-number {
+        font-size: clamp(1.8rem, 4vw, 2.6rem);
+        font-weight: 700;
+        letter-spacing: -0.04em;
+      }
+
+      .streak-row {
+        display: flex;
+        gap: 10px;
+        margin-top: 12px;
+      }
+
+      .streak-dot {
+        width: 14px;
+        height: 14px;
+        border-radius: 999px;
+        background: rgba(59, 130, 246, 0.16);
+        position: relative;
+      }
+
+      .streak-dot.filled {
+        background: var(--blue);
+      }
+
+      .schedule-list {
+        display: grid;
+        gap: 10px;
+      }
+
+      .schedule-status {
+        justify-self: end;
+        padding: 6px 10px;
+        border-radius: 999px;
+        font-size: 0.82rem;
+        font-weight: 600;
+        background: rgba(59, 130, 246, 0.08);
+        color: var(--blue-dark);
+      }
+
+      .schedule-status.done {
+        background: rgba(15, 159, 118, 0.12);
+        color: var(--success);
+      }
+
+      .schedule-status.active {
+        background: rgba(59, 130, 246, 0.12);
+        color: var(--blue-dark);
+      }
+
+      .inline-link {
+        border: none;
+        background: none;
+        color: var(--blue-dark);
+        padding: 10px 4px;
+        min-height: 44px;
+        cursor: pointer;
+        font-weight: 600;
+      }
+
+      .message {
+        margin-top: 12px;
+        padding: 13px 14px;
+        border-radius: 16px;
+        font-size: 0.95rem;
+        background: rgba(59, 130, 246, 0.08);
+        color: var(--ink);
+      }
+
+      .message.error {
+        background: rgba(194, 65, 12, 0.1);
+        color: var(--danger);
+      }
+
+      .message.success {
+        background: rgba(15, 159, 118, 0.1);
+        color: var(--success);
+      }
+
+      @media (max-width: 720px) {
+        .panel-inner {
+          padding: 22px;
+        }
+
+        .field-row,
+        .metrics,
+        .timeline-row,
+        .schedule-row {
+          grid-template-columns: 1fr;
+        }
+
+        .actions {
+          flex-direction: column-reverse;
+          align-items: stretch;
+        }
+
+        .code-grid {
+          gap: 8px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="shell">
+      <section id="quiz-panel" class="panel">
+        <div class="panel-inner">
+          <div class="header-row">
+            <div>
+              <div class="eyebrow">Quench</div>
+              <h1 class="title">Hydration<br />that actually shows up.</h1>
+              <p class="subtle">A two-minute setup. Then the reminders live in your texts, not another forgotten app.</p>
+            </div>
+            <div id="progress-label" class="eyebrow">Step 1 of 8</div>
+          </div>
+
+          <div class="progress">
+            <div id="progress-fill" class="progress-fill"></div>
+          </div>
+
+          <div id="question-root" class="question"></div>
+
+          <div class="actions">
+            <button id="back-button" class="button button-secondary" type="button">Back</button>
+            <button id="next-button" class="button button-primary" type="button">Next</button>
+          </div>
+          <div id="quiz-message" class="message hidden"></div>
+        </div>
+      </section>
+
+      <section id="preview-panel" class="panel hidden">
+        <div class="panel-inner">
+          <div class="eyebrow">Schedule Preview</div>
+          <h2 id="preview-title" class="title" style="font-size: clamp(1.7rem, 4vw, 2.8rem);">Your day is mapped.</h2>
+          <p id="preview-copy" class="subtle"></p>
+
+          <div id="timeline" class="timeline"></div>
+
+          <div class="verify-wrap">
+            <div class="eyebrow">Phone verification</div>
+            <p id="verify-copy" class="subtle" style="margin-top: 6px;">Check your phone for a 6-digit code.</p>
+            <div id="debug-code" class="message hidden"></div>
+            <div class="code-grid">
+              <input class="code-box" maxlength="1" inputmode="numeric" />
+              <input class="code-box" maxlength="1" inputmode="numeric" />
+              <input class="code-box" maxlength="1" inputmode="numeric" />
+              <input class="code-box" maxlength="1" inputmode="numeric" />
+              <input class="code-box" maxlength="1" inputmode="numeric" />
+              <input class="code-box" maxlength="1" inputmode="numeric" />
+            </div>
+            <div class="actions" style="margin-top: 16px;">
+              <button id="edit-button" class="button button-secondary" type="button">Edit answers</button>
+              <button id="verify-button" class="button button-primary" type="button">Start my plan</button>
+            </div>
+            <div id="verify-message" class="message hidden"></div>
+          </div>
+        </div>
+      </section>
+
+      <section id="dashboard-panel" class="panel hidden">
+        <div class="panel-inner">
+          <div class="header-row">
+            <div>
+              <div class="eyebrow">Today</div>
+              <h2 id="dashboard-title" class="title" style="font-size: clamp(1.7rem, 4vw, 2.8rem);">Your hydration plan</h2>
+              <p id="dashboard-copy" class="subtle"></p>
+            </div>
+            <button id="refresh-button" class="button button-secondary" type="button">Refresh</button>
+          </div>
+
+          <div class="metrics">
+            <div class="metric-card">
+              <div class="metric-label">Completed</div>
+              <div id="completed-metric" class="metric-number">0oz</div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-label">Remaining</div>
+              <div id="remaining-metric" class="metric-number">0oz</div>
+            </div>
+          </div>
+
+          <div class="progress" style="margin-bottom: 18px;">
+            <div id="dashboard-progress" class="progress-fill"></div>
+          </div>
+
+          <div class="eyebrow">7-day streak</div>
+          <div id="streak-row" class="streak-row"></div>
+
+          <div class="header-row" style="margin: 28px 0 12px;">
+            <div class="eyebrow">Today's reminders</div>
+            <button id="edit-dashboard-button" class="inline-link" type="button">Edit schedule</button>
+          </div>
+          <div id="schedule-list" class="schedule-list"></div>
+          <div id="dashboard-message" class="message hidden"></div>
+        </div>
+      </section>
+    </main>
+
+    <script>
+      const API_BASE =
+        new URLSearchParams(window.location.search).get("apiBase") ||
+        window.QUENCH_API_BASE ||
+        localStorage.getItem("quench_api_base") ||
+        "http://127.0.0.1:5001";
+      localStorage.setItem("quench_api_base", API_BASE);
+
+      const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || "America/New_York";
+      const answers = {
+        first_name: "",
+        weight_lbs: 160,
+        wake_time: "07:00",
+        sleep_time: "23:00",
+        activity_level: "light",
+        exercise_days: [],
+        climate: "temperate",
+        caffeine_cups: 2,
+        alcohol_weekly: 2,
+        phone: localStorage.getItem("quench_phone") || "",
+        timezone
+      };
+
+      const state = {
+        currentStep: 0,
+        preview: null,
+        dashboard: null
+      };
+
+      const steps = [
+        {
+          key: "first_name",
+          title: "What should Quench call you?",
+          helper: "Optional, but it makes the reminders feel less robotic.",
+          render() {
+            return `
+              <input class="text-input" id="first_name" type="text" maxlength="40" placeholder="Sam" value="${answers.first_name || ""}" />
+            `;
+          }
+        },
+        {
+          key: "weight_lbs",
+          title: "What's your weight?",
+          helper: "Quench uses a simple baseline: roughly half your body weight in ounces, then adjusts from there.",
+          render() {
+            return `
+              <input class="number-input" id="weight_lbs" type="number" min="80" max="500" step="1" value="${answers.weight_lbs}" />
+            `;
+          }
+        },
+        {
+          key: "schedule",
+          title: "When does your day actually start and end?",
+          helper: "Reminders start shortly after you wake up and taper off before bed.",
+          render() {
+            return `
+              <div class="field-row">
+                <div>
+                  <div class="eyebrow" style="margin-bottom: 8px;">Wake time</div>
+                  <input class="time-input" id="wake_time" type="time" value="${answers.wake_time}" />
+                </div>
+                <div>
+                  <div class="eyebrow" style="margin-bottom: 8px;">Sleep time</div>
+                  <input class="time-input" id="sleep_time" type="time" value="${answers.sleep_time}" />
+                </div>
+              </div>
+            `;
+          }
+        },
+        {
+          key: "activity_level",
+          title: "How active are you most days?",
+          helper: "This nudges the daily goal up a bit even before workout days are factored in.",
+          render() {
+            return `
+              <div class="pills">
+                ${["sedentary", "light", "moderate", "heavy"]
+                  .map(
+                    value => `
+                    <button class="pill ${answers.activity_level === value ? "active" : ""}" data-pill-group="activity_level" data-value="${value}" type="button">
+                      ${value.charAt(0).toUpperCase() + value.slice(1)}
+                    </button>
+                  `
+                  )
+                  .join("")}
+              </div>
+            `;
+          }
+        },
+        {
+          key: "exercise_days",
+          title: "Which days are workout days?",
+          helper: "Pick the days where you usually sweat enough to need a little more water.",
+          render() {
+            const dayNames = [
+              { label: "Mon", value: 1 },
+              { label: "Tue", value: 2 },
+              { label: "Wed", value: 3 },
+              { label: "Thu", value: 4 },
+              { label: "Fri", value: 5 },
+              { label: "Sat", value: 6 },
+              { label: "Sun", value: 7 }
+            ];
+            return `
+              <div class="day-pills">
+                ${dayNames
+                  .map(
+                    day => `
+                    <button class="day-pill ${answers.exercise_days.includes(day.value) ? "active" : ""}" data-day="${day.value}" type="button">
+                      ${day.label}
+                    </button>
+                  `
+                  )
+                  .join("")}
+              </div>
+            `;
+          }
+        },
+        {
+          key: "climate",
+          title: "What climate best matches your week?",
+          helper: "Dry and hot weeks ask a little more from the plan.",
+          render() {
+            return `
+              <div class="pills">
+                ${["temperate", "humid", "dry", "hot"]
+                  .map(
+                    value => `
+                    <button class="pill ${answers.climate === value ? "active" : ""}" data-pill-group="climate" data-value="${value}" type="button">
+                      ${value.charAt(0).toUpperCase() + value.slice(1)}
+                    </button>
+                  `
+                  )
+                  .join("")}
+              </div>
+            `;
+          }
+        },
+        {
+          key: "habits",
+          title: "What should Quench account for?",
+          helper: "Coffee and weekly drinks both nudge the target upward.",
+          render() {
+            return `
+              <div class="field-row">
+                <div>
+                  <div class="eyebrow" style="margin-bottom: 8px;">Coffee cups per day</div>
+                  <input class="number-input" id="caffeine_cups" type="number" min="0" max="12" step="1" value="${answers.caffeine_cups}" />
+                </div>
+                <div>
+                  <div class="eyebrow" style="margin-bottom: 8px;">Alcohol drinks per week</div>
+                  <input class="number-input" id="alcohol_weekly" type="number" min="0" max="40" step="1" value="${answers.alcohol_weekly}" />
+                </div>
+              </div>
+            `;
+          }
+        },
+        {
+          key: "phone",
+          title: "Which phone should get the reminders?",
+          helper: "US numbers only for v1. Verification happens in the next step.",
+          render() {
+            return `
+              <input class="phone-input" id="phone" type="tel" placeholder="+1 310 555 1234" value="${answers.phone || ""}" />
+            `;
+          }
+        }
+      ];
+
+      const questionRoot = document.getElementById("question-root");
+      const progressLabel = document.getElementById("progress-label");
+      const progressFill = document.getElementById("progress-fill");
+      const nextButton = document.getElementById("next-button");
+      const backButton = document.getElementById("back-button");
+      const quizMessage = document.getElementById("quiz-message");
+      const previewPanel = document.getElementById("preview-panel");
+      const quizPanel = document.getElementById("quiz-panel");
+      const dashboardPanel = document.getElementById("dashboard-panel");
+      const timeline = document.getElementById("timeline");
+      const previewCopy = document.getElementById("preview-copy");
+      const verifyCopy = document.getElementById("verify-copy");
+      const verifyButton = document.getElementById("verify-button");
+      const verifyMessage = document.getElementById("verify-message");
+      const debugCode = document.getElementById("debug-code");
+      const dashboardCopy = document.getElementById("dashboard-copy");
+      const completedMetric = document.getElementById("completed-metric");
+      const remainingMetric = document.getElementById("remaining-metric");
+      const dashboardProgress = document.getElementById("dashboard-progress");
+      const streakRow = document.getElementById("streak-row");
+      const scheduleList = document.getElementById("schedule-list");
+      const dashboardMessage = document.getElementById("dashboard-message");
+
+      function showMessage(node, text, variant = "") {
+        node.textContent = text;
+        node.className = `message ${variant}`.trim();
+      }
+
+      function hideMessage(node) {
+        node.textContent = "";
+        node.className = "message hidden";
+      }
+
+      function renderStep() {
+        const step = steps[state.currentStep];
+        progressLabel.textContent = `Step ${state.currentStep + 1} of ${steps.length}`;
+        progressFill.style.width = `${((state.currentStep + 1) / steps.length) * 100}%`;
+        questionRoot.innerHTML = `
+          <h2 class="label">${step.title}</h2>
+          <p class="helper">${step.helper}</p>
+          ${step.render()}
+        `;
+        backButton.disabled = state.currentStep === 0;
+        nextButton.textContent = state.currentStep === steps.length - 1 ? "See my plan" : "Next";
+        hideMessage(quizMessage);
+        bindInteractiveControls();
+      }
+
+      function bindInteractiveControls() {
+        questionRoot.querySelectorAll("[data-pill-group]").forEach(button => {
+          button.addEventListener("click", () => {
+            const group = button.dataset.pillGroup;
+            answers[group] = button.dataset.value;
+            renderStep();
+          });
+        });
+
+        questionRoot.querySelectorAll("[data-day]").forEach(button => {
+          button.addEventListener("click", () => {
+            const day = Number(button.dataset.day);
+            if (answers.exercise_days.includes(day)) {
+              answers.exercise_days = answers.exercise_days.filter(value => value !== day);
+            } else {
+              answers.exercise_days = [...answers.exercise_days, day].sort((a, b) => a - b);
+            }
+            renderStep();
+          });
+        });
+      }
+
+      function collectCurrentInputs() {
+        const fields = questionRoot.querySelectorAll("input");
+        fields.forEach(field => {
+          if (!field.id) return;
+          answers[field.id] = field.type === "number" ? Number(field.value) : field.value.trim();
+        });
+      }
+
+      function validateStep() {
+        collectCurrentInputs();
+        const current = steps[state.currentStep].key;
+        if (current === "weight_lbs" && (!answers.weight_lbs || answers.weight_lbs < 80)) {
+          return "Weight should be at least 80 pounds.";
+        }
+        if (current === "schedule" && (!answers.wake_time || !answers.sleep_time)) {
+          return "Wake time and sleep time are both required.";
+        }
+        if (current === "habits" && (answers.caffeine_cups < 0 || answers.alcohol_weekly < 0)) {
+          return "Habits can't be negative.";
+        }
+        if (current === "phone" && !answers.phone) {
+          return "Phone number is required.";
+        }
+        return null;
+      }
+
+      async function api(path, options = {}) {
+        const response = await fetch(`${API_BASE}${path}`, {
+          headers: {
+            "Content-Type": "application/json",
+            ...(options.headers || {})
+          },
+          ...options
+        });
+        const contentType = response.headers.get("content-type") || "";
+        const payload = contentType.includes("application/json") ? await response.json() : await response.text();
+        if (!response.ok) {
+          throw new Error(payload.error || payload || "Something went wrong.");
+        }
+        return payload;
+      }
+
+      function showPreview(preview) {
+        state.preview = preview;
+        quizPanel.classList.add("hidden");
+        dashboardPanel.classList.add("hidden");
+        previewPanel.classList.remove("hidden");
+        previewCopy.textContent = `You should drink ${preview.daily_goal}oz today across ${preview.schedule_preview.length} reminders.`;
+        verifyCopy.textContent = `Check your phone for the 6-digit code sent to ${preview.phone}.`;
+        timeline.innerHTML = preview.schedule_preview
+          .map(
+            item => `
+              <div class="timeline-row">
+                <div class="timeline-time">${item.time_label}</div>
+                <div>${item.amount_oz}oz water break</div>
+                <div class="schedule-amount">${item.amount_oz}oz</div>
+              </div>
+            `
+          )
+          .join("");
+        document.querySelectorAll(".code-box").forEach(box => {
+          box.value = "";
+        });
+        hideMessage(verifyMessage);
+        if (preview.debug_verify_code) {
+          showMessage(debugCode, `Dev mode code: ${preview.debug_verify_code}`, "success");
+        } else {
+          debugCode.className = "message hidden";
+          debugCode.textContent = "";
+        }
+      }
+
+      function renderDashboard(dashboard) {
+        state.dashboard = dashboard;
+        localStorage.setItem("quench_phone", dashboard.phone);
+        quizPanel.classList.add("hidden");
+        previewPanel.classList.add("hidden");
+        dashboardPanel.classList.remove("hidden");
+
+        const greeting = dashboard.first_name ? `${dashboard.first_name}, ` : "";
+        document.getElementById("dashboard-title").textContent = `${greeting}your hydration plan`;
+        dashboardCopy.textContent = `Goal: ${dashboard.daily_goal}oz today. ${dashboard.schedule.length} reminders are on your plan.`;
+        completedMetric.textContent = `${dashboard.today_completed_oz}oz`;
+        remainingMetric.textContent = `${dashboard.remaining_oz}oz`;
+        dashboardProgress.style.width = `${dashboard.progress_percent}%`;
+        streakRow.innerHTML = dashboard.streak_days
+          .map(
+            day => `
+              <div class="streak-dot ${day.hit_goal ? "filled" : ""}" title="${day.label}"></div>
+            `
+          )
+          .join("");
+        scheduleList.innerHTML = dashboard.schedule
+          .map(
+            item => `
+              <div class="schedule-row">
+                <div class="timeline-time">${item.time_label}</div>
+                <div>${item.amount_oz}oz water break</div>
+                <div class="schedule-status ${item.status}">${item.status}</div>
+              </div>
+            `
+          )
+          .join("");
+        hideMessage(dashboardMessage);
+      }
+
+      async function submitOnboarding() {
+        answers.timezone = timezone;
+        try {
+          nextButton.disabled = true;
+          hideMessage(quizMessage);
+          const payload = await api("/api/onboard", {
+            method: "POST",
+            body: JSON.stringify(answers)
+          });
+          if (payload.dashboard) {
+            renderDashboard(payload.dashboard);
+          } else {
+            showPreview(payload);
+          }
+        } catch (error) {
+          showMessage(quizMessage, error.message, "error");
+        } finally {
+          nextButton.disabled = false;
+        }
+      }
+
+      async function verifyCode() {
+        const code = Array.from(document.querySelectorAll(".code-box"))
+          .map(box => box.value)
+          .join("");
+        if (code.length !== 6) {
+          showMessage(verifyMessage, "Enter all 6 digits first.", "error");
+          return;
+        }
+        try {
+          verifyButton.disabled = true;
+          hideMessage(verifyMessage);
+          const dashboard = await api("/api/verify", {
+            method: "POST",
+            body: JSON.stringify({
+              phone: state.preview.phone,
+              code
+            })
+          });
+          renderDashboard(dashboard);
+        } catch (error) {
+          showMessage(verifyMessage, error.message, "error");
+        } finally {
+          verifyButton.disabled = false;
+        }
+      }
+
+      async function refreshDashboard() {
+        const phone = state.dashboard?.phone || localStorage.getItem("quench_phone");
+        if (!phone) {
+          showMessage(dashboardMessage, "No saved phone number found yet.", "error");
+          return;
+        }
+        try {
+          const dashboard = await api(`/api/dashboard/${encodeURIComponent(phone)}`);
+          renderDashboard(dashboard);
+        } catch (error) {
+          showMessage(dashboardMessage, error.message, "error");
+        }
+      }
+
+      nextButton.addEventListener("click", async () => {
+        const validationError = validateStep();
+        if (validationError) {
+          showMessage(quizMessage, validationError, "error");
+          return;
+        }
+        if (state.currentStep === steps.length - 1) {
+          await submitOnboarding();
+          return;
+        }
+        state.currentStep += 1;
+        renderStep();
+      });
+
+      backButton.addEventListener("click", () => {
+        if (state.currentStep === 0) return;
+        collectCurrentInputs();
+        state.currentStep -= 1;
+        renderStep();
+      });
+
+      document.getElementById("edit-button").addEventListener("click", () => {
+        previewPanel.classList.add("hidden");
+        quizPanel.classList.remove("hidden");
+        renderStep();
+      });
+
+      document.getElementById("edit-dashboard-button").addEventListener("click", () => {
+        dashboardPanel.classList.add("hidden");
+        quizPanel.classList.remove("hidden");
+        state.currentStep = 0;
+        renderStep();
+      });
+
+      document.getElementById("refresh-button").addEventListener("click", refreshDashboard);
+      verifyButton.addEventListener("click", verifyCode);
+
+      document.querySelectorAll(".code-box").forEach((box, index, allBoxes) => {
+        box.addEventListener("input", event => {
+          event.target.value = event.target.value.replace(/\D/g, "").slice(0, 1);
+          if (event.target.value && index < allBoxes.length - 1) {
+            allBoxes[index + 1].focus();
+          }
+        });
+        box.addEventListener("keydown", event => {
+          if (event.key === "Backspace" && !event.target.value && index > 0) {
+            allBoxes[index - 1].focus();
+          }
+        });
+      });
+
+      renderStep();
+    </script>
+  </body>
+</html>
